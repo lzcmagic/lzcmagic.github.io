@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search> 
+  
+    
+    <entry>
+      <title><![CDATA[Sophix热修复实践]]></title>
+      <url>/2017/11/02/Sophix%E7%83%AD%E4%BF%AE%E5%A4%8D%E5%AE%9E%E8%B7%B5/</url>
+      <content type="html"><![CDATA[<h3 id="实践环境"><a href="#实践环境" class="headerlink" title="实践环境"></a>实践环境</h3><p>1 . Android Studio<br>2 . win10 64位</p>
+<h3 id="集成步骤"><a href="#集成步骤" class="headerlink" title="集成步骤"></a>集成步骤</h3><h4 id="在阿里云控制台新建app"><a href="#在阿里云控制台新建app" class="headerlink" title="在阿里云控制台新建app"></a>在阿里云控制台新建app</h4><ol>
+<li>获取appId、secret、以及rsa秘钥 <a href="https://www.aliyun.com/product/hotfix" target="_blank" rel="external">网址链接</a><blockquote>
+<p>依次点击产品-&gt;移动服务-&gt;移动热修复  </p>
+</blockquote>
+</li>
+</ol>
+<p><img src="https://raw.githubusercontent.com/lzcmagic/MarkDownPictures/master/sophix/new_program.png" alt="image"></p>
+<blockquote>
+<p>点击管理控制台  </p>
+</blockquote>
+<p><img src="https://raw.githubusercontent.com/lzcmagic/MarkDownPictures/master/sophix/manage_control.png" alt="image"></p>
+<blockquote>
+<p>进入到后台 新建app 查看三个配置参数  </p>
+</blockquote>
+<p><img src="https://raw.githubusercontent.com/lzcmagic/MarkDownPictures/master/sophix/canshu.png" alt="image"></p>
+<h4 id="app配置"><a href="#app配置" class="headerlink" title="app配置"></a>app配置</h4><p>1 . 在app中的<code>build.gradle</code>中配置maven仓库和依赖</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">repositories &#123;</div><div class="line">    maven &#123;</div><div class="line">        url &quot;http://maven.aliyun.com/nexus/content/repositories/releases&quot;</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line">dependencies &#123;</div><div class="line">    ...</div><div class="line">      //如果其它阿里系SDK也可能依赖了utdid这个SDK, 编译期间报utdid重复, 此时进行如下处理即可,</div><div class="line">    // 关闭传递性依赖，没有其他可以将大括号删除:</div><div class="line">    compile (&apos;com.aliyun.ams:alicloud-android-hotfix:3.0.3&apos;) &#123;</div><div class="line">        exclude(module:&apos;alicloud-android-utdid&apos;)</div><div class="line">    &#125;</div><div class="line">    ...</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>2 . 在<code>AndroidManifest</code>文件中添加<code>Sophix</code>权限</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">&lt;!--网络权限--&gt;</div><div class="line">   &lt;uses-permission android:name=&quot;android.permission.INTERNET&quot; /&gt;</div><div class="line">   &lt;uses-permission android:name=&quot;android.permission.ACCESS_NETWORK_STATE&quot; /&gt;</div><div class="line">   &lt;uses-permission android:name=&quot;android.permission.ACCESS_WIFI_STATE&quot; /&gt;</div><div class="line">   &lt;!--外部存储读权限，调试工具加载本地补丁需要--&gt;</div><div class="line">   &lt;uses-permission android:name=&quot;android.permission.READ_EXTERNAL_STORAGE&quot;/&gt;</div></pre></td></tr></table></figure>
+<p>3 . 在<code>AndroidManifest</code>文件中配置上个步骤获取到的appId、secret、rsa秘钥<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">&lt;meta-data</div><div class="line">            android:name=&quot;com.taobao.android.hotfix.IDSECRET&quot;</div><div class="line">            android:value=&quot;your id&quot; /&gt;</div><div class="line">        &lt;meta-data</div><div class="line">            android:name=&quot;com.taobao.android.hotfix.APPSECRET&quot;</div><div class="line">            android:value=&quot;your secret&quot; /&gt;</div><div class="line">        &lt;meta-data</div><div class="line">            android:name=&quot;com.taobao.android.hotfix.RSASECRET&quot;</div><div class="line">            android:value=&quot;your rsa&quot; /&gt;</div></pre></td></tr></table></figure></p>
+<p>4 . 新建Application子类 </p>
+<blockquote>
+<p>在<code>attachBaseContext</code>初始化<code>SophixManager</code>  </p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">@Override</div><div class="line">    protected void attachBaseContext(Context base) &#123;</div><div class="line">        super.attachBaseContext(base);</div><div class="line">        // initialize最好放在attachBaseContext最前面</div><div class="line">        SophixManager.getInstance().setContext(this)</div><div class="line">                .setAppVersion(appVersion)</div><div class="line">                .setAesKey(null)</div><div class="line">                .setEnableDebug(true)</div><div class="line">                .setPatchLoadStatusStub(new PatchLoadStatusListener() &#123;</div><div class="line">                    @Override</div><div class="line">                    public void onLoad(final int mode, final int code, final String info, final int handlePatchVersion) &#123;</div><div class="line">                        // 补丁加载回调通知</div><div class="line">                        if (code == PatchStatus.CODE_LOAD_SUCCESS) &#123;</div><div class="line">                            // 表明补丁加载成功</div><div class="line">                        &#125; else if (code == PatchStatus.CODE_LOAD_RELAUNCH) &#123;</div><div class="line">                            // 表明新补丁生效需要重启. 开发者可提示用户或者强制重启;</div><div class="line">                            // 建议: 用户可以监听进入后台事件, 然后应用自杀</div><div class="line">                            // SophixManager.getInstance().killProcessSafely();//安全自杀应用推荐</div><div class="line">                        &#125; else if (code == PatchStatus.CODE_LOAD_FAIL) &#123;</div><div class="line">                            // 内部引擎异常, 推荐此时清空本地补丁, 防止失败补丁重复加载</div><div class="line">                            SophixManager.getInstance().cleanPatches();</div><div class="line">                        &#125; else &#123;</div><div class="line">                            // 其它错误信息, 查看PatchStatus类说明</div><div class="line">                            Log.d(&quot;lzc&quot;, code + &quot;&quot;);</div><div class="line">                        &#125;</div><div class="line">                    &#125;</div><div class="line">                &#125;).initialize();</div><div class="line">    &#125;</div></pre></td></tr></table></figure>
+<p><em>注意：上面的appVersion与app版本无关可以自己定义只要与自己控制台中版本一致即可。我这里定义的是private static final String appVersion = “1.0.0”;</em></p>
+<blockquote>
+<p>在<code>onCreate</code>中请求差异包<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">// queryAndLoadNewPatch不可放在attachBaseContext 中，否则无网络权限，建议放在后面任意时刻，如onCreate中</div><div class="line">       SophixManager.getInstance().queryAndLoadNewPatch();</div></pre></td></tr></table></figure></p>
+</blockquote>
+<p>5 . 混淆配置</p>
+<p>在app目录下的<code>proguard-rules.pro</code>文件下添加如下代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">#基线包使用，生成mapping.txt</div><div class="line">-printmapping mapping.txt</div><div class="line">#生成的mapping.txt在app/buidl/outputs/mapping/release路径下，移动到/app路径下</div><div class="line">#修复后的项目使用，保证混淆结果一致</div><div class="line">#-applymapping mapping.txt</div><div class="line">#hotfix</div><div class="line">-keep class com.taobao.sophix.**&#123;*;&#125;</div><div class="line">-keep class com.ta.utdid2.device.**&#123;*;&#125;</div><div class="line">#防止inline</div><div class="line">-dontoptimize</div></pre></td></tr></table></figure>
+<h4 id="测试Sophix"><a href="#测试Sophix" class="headerlink" title="测试Sophix"></a>测试Sophix</h4><p>1 . 下载window 差异打包工具<br><a href="http://ams-hotfix-repo.oss-cn-shanghai.aliyuncs.com/SophixPatchTool_windows.zip" target="_blank" rel="external">链接地址</a><br>2 . 将新旧差异包差异打包<br><img src="https://raw.githubusercontent.com/lzcmagic/MarkDownPictures/master/sophix/tool1.png" alt="image"></p>
+<p>3 . 这其中可以设置差异包所用到的签名，签名必须与app签名一致 保证安全性<br><img src="https://raw.githubusercontent.com/lzcmagic/MarkDownPictures/master/sophix/tool2.png" alt="image">  </p>
+<p>4 . 点击go 就会生成差异包以.jar结尾 路劲就是自己设定的<br><img src="https://raw.githubusercontent.com/lzcmagic/MarkDownPictures/master/sophix/result.png" alt="image">  </p>
+<p>5 . 将生成的差异包上传至控制台<br><img src="https://raw.githubusercontent.com/lzcmagic/MarkDownPictures/master/sophix/control1.png" alt="image">    </p>
+<p><img src="https://raw.githubusercontent.com/lzcmagic/MarkDownPictures/master/sophix/control2.png" alt="image"></p>
+<blockquote>
+<p>下发差异包之前最好先下载阿里提供的测试工具测试一下差异包是否能用然后在灰度下发在全量下发  </p>
+</blockquote>
+<p>6 . 下载阿里差异包测试工具<br><a href="http://ams-hotfix-repo.oss-cn-shanghai.aliyuncs.com/hotfix_debug_tool-release.apk" target="_blank" rel="external">下载地址</a></p>
+<p>7 . 将旧的apk和调试工具装在手机中 打开调试工具 输入包名-&gt;连接应用-&gt;扫描二维码 观察下方输出的日志<br><img src="https://raw.githubusercontent.com/lzcmagic/MarkDownPictures/master/sophix/monitor.png" alt="image">  </p>
+<p>8 . 成功的话就可以开始下发差异包了，之后就可以观察手机中旧的apk发生了变化了</p>
+<p><a href="https://help.aliyun.com/document_detail/53240.html?spm=5176.doc53248.6.546.VLG1fp" target="_blank" rel="external">官方接入指南</a></p>
+]]></content>
+      
+        
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hello World]]></title>
+      <url>/2017/10/31/hello-world/</url>
+      <content type="html"><![CDATA[<p>Welcome to <a href="https://hexo.io/" target="_blank" rel="external">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="external">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="external">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="external">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo new <span class="string">"My New Post"</span></div></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="external">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo server</div></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="external">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo generate</div></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="external">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo deploy</div></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/deployment.html" target="_blank" rel="external">Deployment</a></p>
+]]></content>
+      
+        
+    </entry>
+    
+    <entry>
+      <title><![CDATA[第一篇文章]]></title>
+      <url>/2017/10/31/%E7%AC%AC%E4%B8%80%E7%AF%87%E6%96%87%E7%AB%A0/</url>
+      <content type="html"><![CDATA[<blockquote><p>content</p>
+<footer><strong>[author[</strong><cite>source]] [link] [source_link_title]</cite></footer></blockquote>
+<blockquote><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque hendrerit lacus ut purus iaculis feugiat. Sed nec tempor elit, quis aliquam neque. Curabitur sed diam eget dolor fermentum semper at eu lorem.</p>
+</blockquote>
+<blockquote><p>Do not just seek happiness for yourself. Seek happiness for all. Through kindness. Through mercy.</p>
+<footer><strong>David Levithan</strong><cite>Wide Awake</cite></footer></blockquote>
+<blockquote><p>NEW: DevDocs now comes with syntax highlighting. <a href="http://devdocs.io" target="_blank" rel="external">http://devdocs.io</a></p>
+<footer><strong>@DevDocs</strong><cite><a href="https://twitter.com/devdocs/status/356095192085962752" target="_blank" rel="external">twitter.com/devdocs/status/356095192085962752</a></cite></footer></blockquote>
+<figure class="highlight plain"><figcaption><span>[title] [] [url] [link text]</span></figcaption><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">code snippet</div></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">alert(&apos;Hello World!&apos;);</div></pre></td></tr></table></figure>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">[rectangle setX: <span class="number">10</span> y: <span class="number">10</span> width: <span class="number">20</span> height: <span class="number">20</span>];</div></pre></td></tr></table></figure>
+<div class="video-container"><iframe src="//www.youtube.com/embed/video_id" frameborder="0" allowfullscreen></iframe></div>
+]]></content>
+      
+        
+    </entry>
+    
+  
+  
+    
+  
+</search>
